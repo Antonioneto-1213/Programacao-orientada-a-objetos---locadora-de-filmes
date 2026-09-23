@@ -351,11 +351,11 @@ class Locadora(QMainWindow):
         self.setStyleSheet("""
 
             QMainWindow {
-                background-color: #0b0b0b;
+                background-color: #0b1120;
             }
 
             QWidget {
-                background-color: #0b0b0b;
+                background-color: #0b1120;
                 color: white;
                 font-family: Arial;
             }
@@ -367,9 +367,9 @@ class Locadora(QMainWindow):
             QLineEdit,
             QComboBox,
             QSpinBox {
-                background-color: #1b1b1b;
+                background-color: #131a2c;
                 color: white;
-                border: 1px solid #444444;
+                border: 1px solid #2b3a5c;
                 border-radius: 6px;
                 padding: 8px;
             }
@@ -377,73 +377,73 @@ class Locadora(QMainWindow):
             QLineEdit:focus,
             QComboBox:focus,
             QSpinBox:focus {
-                border: 1px solid #777777;
+                border: 1px solid #3b82f6;
             }
 
             QPushButton {
-                background-color: #222222;
+                background-color: #1e3a8a;
                 color: white;
-                border: 1px solid #444444;
+                border: 1px solid #2563eb;
                 border-radius: 6px;
                 padding: 8px 12px;
             }
 
             QPushButton:hover {
-                background-color: #333333;
+                background-color: #2563eb;
             }
 
             QPushButton:pressed {
-                background-color: #111111;
+                background-color: #0d1526;
             }
 
             QTableWidget {
-                background-color: #151515;
+                background-color: #101827;
                 color: white;
             }
 
             QMenuBar {
-                background-color: #111111;
+                background-color: #0d1526;
                 color: white;
             }
 
             QMenuBar::item:selected {
-                background-color: #333333;
+                background-color: #2563eb;
             }
 
             QMenu {
-                background-color: #181818;
+                background-color: #0f172a;
                 color: white;
-                border: 1px solid #444444;
+                border: 1px solid #2b3a5c;
             }
 
             QMenu::item:selected {
-                background-color: #333333;
+                background-color: #2563eb;
             }
 
             QToolBar {
-                background-color: #111111;
-                border-bottom: 1px solid #333333;
+                background-color: #0d1526;
+                border-bottom: 1px solid #2b3a5c;
                 spacing: 5px;
                 padding: 5px;
             }
 
             QStatusBar {
-                background-color: #111111;
-                color: #aaaaaa;
+                background-color: #0d1526;
+                color: #93b4e0;
             }
 
             QScrollArea {
                 border: none;
-                background-color: #0b0b0b;
+                background-color: #0b1120;
             }
 
             QScrollBar:vertical {
-                background: #111111;
+                background: #0d1526;
                 width: 12px;
             }
 
             QScrollBar::handle:vertical {
-                background: #444444;
+                background: #2b3a5c;
                 border-radius: 6px;
             }
 
@@ -844,8 +844,8 @@ class Locadora(QMainWindow):
 
         card.setStyleSheet("""
             QFrame {
-                background-color: #151515;
-                border: 1px solid #333333;
+                background-color: #101827;
+                border: 1px solid #2563eb;
                 border-radius: 10px;
             }
         """)
@@ -901,8 +901,8 @@ class Locadora(QMainWindow):
             )
 
             capa.setStyleSheet("""
-                background-color: #222222;
-                color: #aaaaaa;
+                background-color: #1e3a8a;
+                color: #bfdbfe;
                 border-radius: 5px;
                 font-size: 16px;
                 font-weight: bold;
@@ -949,7 +949,7 @@ class Locadora(QMainWindow):
         )
 
         informacoes.setStyleSheet("""
-            color: #999999;
+            color: #7ea3d1;
             padding: 3px;
         """)
 
@@ -970,7 +970,7 @@ class Locadora(QMainWindow):
         )
 
         status.setStyleSheet("""
-            color: #cccccc;
+            color: #93c5fd;
             font-weight: bold;
             padding: 4px;
         """)
