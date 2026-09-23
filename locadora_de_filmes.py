@@ -1,0 +1,1488 @@
+import sys
+import os
+
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QComboBox,
+    QSpinBox,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGridLayout,
+    QMessageBox,
+    QDialog,
+    QFormLayout,
+    QToolBar,
+    QStatusBar,
+    QFrame,
+    QScrollArea,
+    QInputDialog
+)
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction, QPixmap
+
+
+# ============================================================
+# JANELA DE CADASTRO DE CLIENTE
+# ============================================================
+
+class JanelaCliente(QDialog):
+
+    cliente_cadastrado = Signal(str, str, str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Cadastro de Cliente")
+        self.setFixedSize(400, 300)
+
+        layout = QVBoxLayout()
+
+        titulo = QLabel("CADASTRO DE CLIENTE")
+        titulo.setAlignment(Qt.AlignCenter)
+        titulo.setStyleSheet("""
+            font-size: 20px;
+            font-weight: bold;
+            padding: 15px;
+        """)
+
+        layout.addWidget(titulo)
+
+        formulario = QFormLayout()
+
+        self.nome = QLineEdit()
+        self.nome.setPlaceholderText("Nome completo")
+
+        self.telefone = QLineEdit()
+        self.telefone.setPlaceholderText("(00) 00000-0000")
+
+        self.email = QLineEdit()
+        self.email.setPlaceholderText("email@email.com")
+
+        formulario.addRow("Nome:", self.nome)
+        formulario.addRow("Telefone:", self.telefone)
+        formulario.addRow("E-mail:", self.email)
+
+        layout.addLayout(formulario)
+
+        botoes = QHBoxLayout()
+
+        btn_salvar = QPushButton("Salvar")
+        btn_cancelar = QPushButton("Cancelar")
+
+        btn_salvar.clicked.connect(self.salvar)
+        btn_cancelar.clicked.connect(self.reject)
+
+        botoes.addWidget(btn_salvar)
+        botoes.addWidget(btn_cancelar)
+
+        layout.addLayout(botoes)
+
+        self.setLayout(layout)
+
+    def salvar(self):
+
+        nome = self.nome.text().strip()
+        telefone = self.telefone.text().strip()
+        email = self.email.text().strip()
+
+        if not nome:
+            QMessageBox.warning(
+                self,
+                "Atenção",
+                "Digite o nome do cliente."
+            )
+            return
+
+        self.cliente_cadastrado.emit(
+            nome,
+            telefone,
+            email
+        )
+
+        self.accept()
+
+
+# ============================================================
+# JANELA DE CADASTRO DE FILME
+# ============================================================
+
+class JanelaFilme(QDialog):
+
+    filme_cadastrado = Signal(str, str, int, str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Cadastro de Filme")
+        self.setFixedSize(450, 350)
+
+        layout = QVBoxLayout()
+
+        titulo = QLabel("CADASTRO DE FILME")
+        titulo.setAlignment(Qt.AlignCenter)
+        titulo.setStyleSheet("""
+            font-size: 20px;
+            font-weight: bold;
+            padding: 15px;
+        """)
+
+        layout.addWidget(titulo)
+
+        formulario = QFormLayout()
+
+        self.nome = QLineEdit()
+        self.nome.setPlaceholderText("Nome do filme")
+
+        self.genero = QComboBox()
+        self.genero.addItems([
+            "Ação",
+            "Aventura",
+            "Comédia",
+            "Drama",
+            "Ficção Científica",
+            "Terror",
+            "Romance",
+            "Animação",
+            "Suspense"
+        ])
+
+        self.ano = QSpinBox()
+        self.ano.setRange(1900, 2100)
+        self.ano.setValue(2026)
+
+        self.capa = QLineEdit()
+        self.capa.setPlaceholderText(
+            "Exemplo: interestelar.jpg"
+        )
+
+        formulario.addRow("Nome:", self.nome)
+        formulario.addRow("Gênero:", self.genero)
+        formulario.addRow("Ano:", self.ano)
+        formulario.addRow("Capa:", self.capa)
+
+        layout.addLayout(formulario)
+
+        aviso = QLabel(
+            "A imagem deve estar dentro da pasta 'capas'."
+        )
+
+        aviso.setStyleSheet("""
+            color: #aaaaaa;
+            padding: 5px;
+        """)
+
+        layout.addWidget(aviso)
+
+        botoes = QHBoxLayout()
+
+        btn_salvar = QPushButton("Salvar")
+        btn_cancelar = QPushButton("Cancelar")
+
+        btn_salvar.clicked.connect(self.salvar)
+        btn_cancelar.clicked.connect(self.reject)
+
+        botoes.addWidget(btn_salvar)
+        botoes.addWidget(btn_cancelar)
+
+        layout.addLayout(botoes)
+
+        self.setLayout(layout)
+
+    def salvar(self):
+
+        nome = self.nome.text().strip()
+        genero = self.genero.currentText()
+        ano = self.ano.value()
+        capa = self.capa.text().strip()
+
+        if not nome:
+            QMessageBox.warning(
+                self,
+                "Atenção",
+                "Digite o nome do filme."
+            )
+            return
+
+        self.filme_cadastrado.emit(
+            nome,
+            genero,
+            ano,
+            capa
+        )
+
+        self.accept()
+
+
+# ============================================================
+# JANELA PRINCIPAL
+# ============================================================
+
+class Locadora(QMainWindow):
+
+    def __init__(self):
+
+        super().__init__()
+
+        self.setWindowTitle("Locadora de Filmes")
+
+        # Abre a janela maximizada
+        self.showMaximized()
+
+        # ====================================================
+        # DADOS DOS FILMES
+        # ====================================================
+
+        self.filmes = [
+
+            {
+                "codigo": 1,
+                "nome": "Interestelar",
+                "genero": "Ficção Científica",
+                "ano": 2014,
+                "capa": "interestelar.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 2,
+                "nome": "O Poderoso Chefão",
+                "genero": "Drama",
+                "ano": 1972,
+                "capa": "poderoso_chefao.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 3,
+                "nome": "Vingadores",
+                "genero": "Ação",
+                "ano": 2012,
+                "capa": "vingadores.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 4,
+                "nome": "Toy Story",
+                "genero": "Animação",
+                "ano": 1995,
+                "capa": "toy_story.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 5,
+                "nome": "Batman",
+                "genero": "Ação",
+                "ano": 2022,
+                "capa": "batman.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 6,
+                "nome": "Titanic",
+                "genero": "Romance",
+                "ano": 1997,
+                "capa": "titanic.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 7,
+                "nome": "Jurassic Park",
+                "genero": "Aventura",
+                "ano": 1993,
+                "capa": "jurassic_park.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 8,
+                "nome": "Corra!",
+                "genero": "Terror",
+                "ano": 2017,
+                "capa": "corra.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 9,
+                "nome": "O Rei Leão",
+                "genero": "Animação",
+                "ano": 1994,
+                "capa": "rei_leao.jpg",
+                "status": "Disponível"
+            },
+
+            {
+                "codigo": 10,
+                "nome": "Homem-Aranha",
+                "genero": "Ação",
+                "ano": 2018,
+                "capa": "homem_aranha.jpg",
+                "status": "Disponível"
+            }
+
+        ]
+
+        # ====================================================
+        # CLIENTES
+        # ====================================================
+
+        self.clientes = [
+            {
+                "nome": "João Silva",
+                "telefone": "(89) 99999-9999",
+                "email": "joao@email.com"
+            }
+        ]
+
+        # ====================================================
+        # ESTILO
+        # ====================================================
+
+        self.setStyleSheet("""
+
+            QMainWindow {
+                background-color: #0b0b0b;
+            }
+
+            QWidget {
+                background-color: #0b0b0b;
+                color: white;
+                font-family: Arial;
+            }
+
+            QLabel {
+                color: white;
+            }
+
+            QLineEdit,
+            QComboBox,
+            QSpinBox {
+                background-color: #1b1b1b;
+                color: white;
+                border: 1px solid #444444;
+                border-radius: 6px;
+                padding: 8px;
+            }
+
+            QLineEdit:focus,
+            QComboBox:focus,
+            QSpinBox:focus {
+                border: 1px solid #777777;
+            }
+
+            QPushButton {
+                background-color: #222222;
+                color: white;
+                border: 1px solid #444444;
+                border-radius: 6px;
+                padding: 8px 12px;
+            }
+
+            QPushButton:hover {
+                background-color: #333333;
+            }
+
+            QPushButton:pressed {
+                background-color: #111111;
+            }
+
+            QTableWidget {
+                background-color: #151515;
+                color: white;
+            }
+
+            QMenuBar {
+                background-color: #111111;
+                color: white;
+            }
+
+            QMenuBar::item:selected {
+                background-color: #333333;
+            }
+
+            QMenu {
+                background-color: #181818;
+                color: white;
+                border: 1px solid #444444;
+            }
+
+            QMenu::item:selected {
+                background-color: #333333;
+            }
+
+            QToolBar {
+                background-color: #111111;
+                border-bottom: 1px solid #333333;
+                spacing: 5px;
+                padding: 5px;
+            }
+
+            QStatusBar {
+                background-color: #111111;
+                color: #aaaaaa;
+            }
+
+            QScrollArea {
+                border: none;
+                background-color: #0b0b0b;
+            }
+
+            QScrollBar:vertical {
+                background: #111111;
+                width: 12px;
+            }
+
+            QScrollBar::handle:vertical {
+                background: #444444;
+                border-radius: 6px;
+            }
+
+        """)
+
+        # ====================================================
+        # MENU
+        # ====================================================
+
+        self.criar_menu()
+
+        # ====================================================
+        # TOOLBAR
+        # ====================================================
+
+        self.criar_toolbar()
+
+        # ====================================================
+        # STATUS BAR
+        # ====================================================
+
+        self.statusBar = QStatusBar()
+        self.setStatusBar(self.statusBar)
+
+        self.statusBar.showMessage(
+            "Sistema de Locadora de Filmes"
+        )
+
+        # ====================================================
+        # WIDGET PRINCIPAL
+        # ====================================================
+
+        widget_principal = QWidget()
+
+        layout_principal = QVBoxLayout()
+
+        layout_principal.setContentsMargins(
+            25,
+            20,
+            25,
+            20
+        )
+
+        # ====================================================
+        # CABEÇALHO
+        # ====================================================
+
+        cabecalho = QHBoxLayout()
+
+        titulo = QLabel("LOCADORA DE FILMES")
+
+        titulo.setStyleSheet("""
+            font-size: 28px;
+            font-weight: bold;
+        """)
+
+        cabecalho.addWidget(titulo)
+
+        cabecalho.addStretch()
+
+        # Botão cadastrar filme
+
+        self.btn_cadastro_filme = QPushButton(
+            "+ Cadastrar filme"
+        )
+
+        self.btn_cadastro_filme.clicked.connect(
+            self.abrir_filme
+        )
+
+        cabecalho.addWidget(
+            self.btn_cadastro_filme
+        )
+
+        # Botão cadastrar cliente
+
+        self.btn_cadastro_cliente = QPushButton(
+            "+ Cadastrar cliente"
+        )
+
+        self.btn_cadastro_cliente.clicked.connect(
+            self.abrir_cliente
+        )
+
+        cabecalho.addWidget(
+            self.btn_cadastro_cliente
+        )
+
+        layout_principal.addLayout(
+            cabecalho
+        )
+
+        # ====================================================
+        # PESQUISA
+        # ====================================================
+
+        self.pesquisa = QLineEdit()
+
+        self.pesquisa.setPlaceholderText(
+            "Pesquisar filme..."
+        )
+
+        self.pesquisa.textChanged.connect(
+            self.atualizar_interface
+        )
+
+        layout_principal.addWidget(
+            self.pesquisa
+        )
+
+        # ====================================================
+        # ÁREA DOS FILMES
+        # ====================================================
+
+        self.scroll = QScrollArea()
+
+        self.scroll.setWidgetResizable(True)
+
+        self.area_filmes = QWidget()
+
+        self.grid_filmes = QGridLayout()
+
+        self.grid_filmes.setSpacing(20)
+
+        self.area_filmes.setLayout(
+            self.grid_filmes
+        )
+
+        self.scroll.setWidget(
+            self.area_filmes
+        )
+
+        layout_principal.addWidget(
+            self.scroll
+        )
+
+        widget_principal.setLayout(
+            layout_principal
+        )
+
+        self.setCentralWidget(
+            widget_principal
+        )
+
+        # ====================================================
+        # MOSTRAR FILMES
+        # ====================================================
+
+        self.atualizar_interface()
+
+    # ========================================================
+    # MENU
+    # ========================================================
+
+    def criar_menu(self):
+
+        menu = self.menuBar()
+
+        # ---------------- FILMES ----------------
+
+        menu_filmes = menu.addMenu("Filmes")
+
+        novo_filme = QAction(
+            "Cadastrar filme",
+            self
+        )
+
+        novo_filme.triggered.connect(
+            self.abrir_filme
+        )
+
+        menu_filmes.addAction(
+            novo_filme
+        )
+
+        remover_filme = QAction(
+            "Remover filme",
+            self
+        )
+
+        remover_filme.triggered.connect(
+            self.selecionar_filme_remover
+        )
+
+        menu_filmes.addAction(
+            remover_filme
+        )
+
+        menu_filmes.addSeparator()
+
+        devolver = QAction(
+            "Devolver filme",
+            self
+        )
+
+        devolver.triggered.connect(
+            self.devolver_filme
+        )
+
+        menu_filmes.addAction(
+            devolver
+        )
+
+        # ---------------- CLIENTES ----------------
+
+        menu_clientes = menu.addMenu("Clientes")
+
+        novo_cliente = QAction(
+            "Cadastrar cliente",
+            self
+        )
+
+        novo_cliente.triggered.connect(
+            self.abrir_cliente
+        )
+
+        menu_clientes.addAction(
+            novo_cliente
+        )
+
+        # ---------------- SISTEMA ----------------
+
+        menu_sistema = menu.addMenu("Sistema")
+
+        sair = QAction(
+            "Sair",
+            self
+        )
+
+        sair.triggered.connect(
+            self.close
+        )
+
+        menu_sistema.addAction(
+            sair
+        )
+
+        # ---------------- AJUDA ----------------
+
+        menu_ajuda = menu.addMenu("Ajuda")
+
+        sobre = QAction(
+            "Sobre",
+            self
+        )
+
+        sobre.triggered.connect(
+            self.sobre
+        )
+
+        menu_ajuda.addAction(
+            sobre
+        )
+
+    # ========================================================
+    # TOOLBAR
+    # ========================================================
+
+    def criar_toolbar(self):
+
+        toolbar = QToolBar(
+            "Barra de ferramentas"
+        )
+
+        self.addToolBar(toolbar)
+
+        novo_aluguel = QAction(
+            "Novo aluguel",
+            self
+        )
+
+        novo_aluguel.triggered.connect(
+            self.novo_aluguel
+        )
+
+        toolbar.addAction(
+            novo_aluguel
+        )
+
+        novo_filme = QAction(
+            "Novo filme",
+            self
+        )
+
+        novo_filme.triggered.connect(
+            self.abrir_filme
+        )
+
+        toolbar.addAction(
+            novo_filme
+        )
+
+        novo_cliente = QAction(
+            "Novo cliente",
+            self
+        )
+
+        novo_cliente.triggered.connect(
+            self.abrir_cliente
+        )
+
+        toolbar.addAction(
+            novo_cliente
+        )
+
+        remover = QAction(
+            "Remover filme",
+            self
+        )
+
+        remover.triggered.connect(
+            self.selecionar_filme_remover
+        )
+
+        toolbar.addAction(
+            remover
+        )
+
+        devolver = QAction(
+            "Devolver",
+            self
+        )
+
+        devolver.triggered.connect(
+            self.devolver_filme
+        )
+
+        toolbar.addAction(
+            devolver
+        )
+
+    # ========================================================
+    # ATUALIZAR INTERFACE
+    # ========================================================
+
+    def atualizar_interface(self):
+
+        # Remove os cards antigos
+
+        while self.grid_filmes.count():
+
+            item = self.grid_filmes.takeAt(0)
+
+            widget = item.widget()
+
+            if widget:
+
+                widget.deleteLater()
+
+        texto = self.pesquisa.text().lower()
+
+        filmes_filtrados = []
+
+        for filme in self.filmes:
+
+            if texto in filme["nome"].lower():
+
+                filmes_filtrados.append(
+                    filme
+                )
+
+        # Cinco filmes por linha
+
+        colunas = 5
+
+        for indice, filme in enumerate(
+            filmes_filtrados
+        ):
+
+            linha = indice // colunas
+
+            coluna = indice % colunas
+
+            card = self.criar_card(
+                filme
+            )
+
+            self.grid_filmes.addWidget(
+                card,
+                linha,
+                coluna
+            )
+
+        self.grid_filmes.setRowStretch(
+            len(filmes_filtrados) // colunas + 1,
+            1
+        )
+
+    # ========================================================
+    # CRIAR CARD DO FILME
+    # ========================================================
+
+    def criar_card(self, filme):
+
+        card = QFrame()
+
+        card.setFixedWidth(220)
+
+        card.setStyleSheet("""
+            QFrame {
+                background-color: #151515;
+                border: 1px solid #333333;
+                border-radius: 10px;
+            }
+        """)
+
+        layout = QVBoxLayout()
+
+        layout.setContentsMargins(
+            10,
+            10,
+            10,
+            10
+        )
+
+        # ====================================================
+        # CAPA
+        # ====================================================
+
+        capa = QLabel()
+
+        capa.setFixedSize(
+            198,
+            260
+        )
+
+        capa.setAlignment(
+            Qt.AlignCenter
+        )
+
+        caminho = os.path.join(
+            "capas",
+            filme["capa"]
+        )
+
+        if os.path.exists(caminho):
+
+            pixmap = QPixmap(caminho)
+
+            pixmap = pixmap.scaled(
+                198,
+                260,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+
+            capa.setPixmap(
+                pixmap
+            )
+
+        else:
+
+            capa.setText(
+                "CAPA\n\n" + filme["nome"]
+            )
+
+            capa.setStyleSheet("""
+                background-color: #222222;
+                color: #aaaaaa;
+                border-radius: 5px;
+                font-size: 16px;
+                font-weight: bold;
+            """)
+
+        layout.addWidget(
+            capa
+        )
+
+        # ====================================================
+        # NOME
+        # ====================================================
+
+        nome = QLabel(
+            filme["nome"]
+        )
+
+        nome.setAlignment(
+            Qt.AlignCenter
+        )
+
+        nome.setWordWrap(True)
+
+        nome.setStyleSheet("""
+            font-size: 17px;
+            font-weight: bold;
+            padding-top: 8px;
+        """)
+
+        layout.addWidget(
+            nome
+        )
+
+        # ====================================================
+        # INFORMAÇÕES
+        # ====================================================
+
+        informacoes = QLabel(
+            f"{filme['genero']} • {filme['ano']}"
+        )
+
+        informacoes.setAlignment(
+            Qt.AlignCenter
+        )
+
+        informacoes.setStyleSheet("""
+            color: #999999;
+            padding: 3px;
+        """)
+
+        layout.addWidget(
+            informacoes
+        )
+
+        # ====================================================
+        # STATUS
+        # ====================================================
+
+        status = QLabel(
+            filme["status"]
+        )
+
+        status.setAlignment(
+            Qt.AlignCenter
+        )
+
+        status.setStyleSheet("""
+            color: #cccccc;
+            font-weight: bold;
+            padding: 4px;
+        """)
+
+        layout.addWidget(
+            status
+        )
+
+        # ====================================================
+        # BOTÕES
+        # ====================================================
+
+        botoes = QHBoxLayout()
+
+        # Botão alugar
+
+        btn_alugar = QPushButton(
+            "Alugar"
+        )
+
+        btn_alugar.clicked.connect(
+            lambda checked=False,
+            codigo=filme["codigo"]:
+            self.alugar_filme(codigo)
+        )
+
+        botoes.addWidget(
+            btn_alugar
+        )
+
+        # Botão remover
+
+        btn_remover = QPushButton(
+            "Remover"
+        )
+
+        btn_remover.clicked.connect(
+            lambda checked=False,
+            codigo=filme["codigo"]:
+            self.remover_filme(codigo)
+        )
+
+        botoes.addWidget(
+            btn_remover
+        )
+
+        layout.addLayout(
+            botoes
+        )
+
+        card.setLayout(
+            layout
+        )
+
+        return card
+
+    # ========================================================
+    # ALUGAR FILME
+    # ========================================================
+
+    def alugar_filme(self, codigo):
+
+        filme = next(
+            (
+                filme
+                for filme in self.filmes
+                if filme["codigo"] == codigo
+            ),
+            None
+        )
+
+        if filme is None:
+            return
+
+        if filme["status"] == "Alugado":
+
+            QMessageBox.warning(
+                self,
+                "Filme indisponível",
+                "Esse filme já está alugado."
+            )
+
+            return
+
+        if not self.clientes:
+
+            QMessageBox.warning(
+                self,
+                "Nenhum cliente",
+                "Cadastre um cliente antes de realizar um aluguel."
+            )
+
+            return
+
+        nomes = [
+            cliente["nome"]
+            for cliente in self.clientes
+        ]
+
+        cliente, ok = QInputDialog.getItem(
+            self,
+            "Alugar filme",
+            "Selecione o cliente:",
+            nomes,
+            0,
+            False
+        )
+
+        if not ok:
+            return
+
+        dias, ok = QInputDialog.getInt(
+            self,
+            "Período do aluguel",
+            "Quantidade de dias:",
+            3,
+            1,
+            30
+        )
+
+        if not ok:
+            return
+
+        filme["status"] = "Alugado"
+
+        self.atualizar_interface()
+
+        self.statusBar.showMessage(
+            f"{filme['nome']} alugado para {cliente} por {dias} dias."
+        )
+
+        QMessageBox.information(
+            self,
+            "Aluguel realizado",
+            f"Filme: {filme['nome']}\n"
+            f"Cliente: {cliente}\n"
+            f"Prazo: {dias} dias"
+        )
+
+    # ========================================================
+    # REMOVER FILME
+    # ========================================================
+
+    def remover_filme(self, codigo):
+
+        filme = next(
+            (
+                filme
+                for filme in self.filmes
+                if filme["codigo"] == codigo
+            ),
+            None
+        )
+
+        if filme is None:
+            return
+
+        # Confirmação
+
+        resposta = QMessageBox.question(
+            self,
+            "Remover filme",
+            f"Tem certeza que deseja remover o filme:\n\n"
+            f"{filme['nome']}?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if resposta == QMessageBox.Yes:
+
+            nome_filme = filme["nome"]
+
+            self.filmes.remove(
+                filme
+            )
+
+            self.atualizar_interface()
+
+            self.statusBar.showMessage(
+                f"Filme '{nome_filme}' removido."
+            )
+
+            QMessageBox.information(
+                self,
+                "Filme removido",
+                f"O filme '{nome_filme}' "
+                f"foi removido com sucesso."
+            )
+
+    # ========================================================
+    # ESCOLHER FILME PARA REMOVER
+    # ========================================================
+
+    def selecionar_filme_remover(self):
+
+        if not self.filmes:
+
+            QMessageBox.information(
+                self,
+                "Remover filme",
+                "Não existem filmes cadastrados."
+            )
+
+            return
+
+        nomes = [
+            filme["nome"]
+            for filme in self.filmes
+        ]
+
+        nome, ok = QInputDialog.getItem(
+            self,
+            "Remover filme",
+            "Selecione o filme:",
+            nomes,
+            0,
+            False
+        )
+
+        if not ok:
+            return
+
+        filme = next(
+            (
+                filme
+                for filme in self.filmes
+                if filme["nome"] == nome
+            ),
+            None
+        )
+
+        if filme:
+
+            self.remover_filme(
+                filme["codigo"]
+            )
+
+    # ========================================================
+    # DEVOLVER FILME
+    # ========================================================
+
+    def devolver_filme(self):
+
+        alugados = [
+            filme
+            for filme in self.filmes
+            if filme["status"] == "Alugado"
+        ]
+
+        if not alugados:
+
+            QMessageBox.information(
+                self,
+                "Devolução",
+                "Não existem filmes alugados."
+            )
+
+            return
+
+        nomes = [
+            filme["nome"]
+            for filme in alugados
+        ]
+
+        nome, ok = QInputDialog.getItem(
+            self,
+            "Devolver filme",
+            "Selecione o filme:",
+            nomes,
+            0,
+            False
+        )
+
+        if not ok:
+            return
+
+        for filme in alugados:
+
+            if filme["nome"] == nome:
+
+                filme["status"] = "Disponível"
+
+                break
+
+        self.atualizar_interface()
+
+        self.statusBar.showMessage(
+            f"{nome} devolvido com sucesso."
+        )
+
+        QMessageBox.information(
+            self,
+            "Devolução realizada",
+            f"O filme '{nome}' está disponível novamente."
+        )
+
+    # ========================================================
+    # ABRIR CADASTRO DE CLIENTE
+    # ========================================================
+
+    def abrir_cliente(self):
+
+        janela = JanelaCliente(
+            self
+        )
+
+        janela.cliente_cadastrado.connect(
+            self.adicionar_cliente
+        )
+
+        janela.exec()
+
+    # ========================================================
+    # ADICIONAR CLIENTE
+    # ========================================================
+
+    def adicionar_cliente(
+        self,
+        nome,
+        telefone,
+        email
+    ):
+
+        self.clientes.append({
+
+            "nome": nome,
+            "telefone": telefone,
+            "email": email
+
+        })
+
+        QMessageBox.information(
+            self,
+            "Cliente cadastrado",
+            f"Cliente '{nome}' cadastrado com sucesso."
+        )
+
+        self.statusBar.showMessage(
+            f"Cliente '{nome}' cadastrado."
+        )
+
+    # ========================================================
+    # ABRIR CADASTRO DE FILME
+    # ========================================================
+
+    def abrir_filme(self):
+
+        janela = JanelaFilme(
+            self
+        )
+
+        janela.filme_cadastrado.connect(
+            self.adicionar_filme
+        )
+
+        janela.exec()
+
+    # ========================================================
+    # ADICIONAR FILME
+    # ========================================================
+
+    def adicionar_filme(
+        self,
+        nome,
+        genero,
+        ano,
+        capa
+    ):
+
+        novo_codigo = 1
+
+        if self.filmes:
+
+            novo_codigo = max(
+                filme["codigo"]
+                for filme in self.filmes
+            ) + 1
+
+        novo_filme = {
+
+            "codigo": novo_codigo,
+            "nome": nome,
+            "genero": genero,
+            "ano": ano,
+            "capa": capa,
+            "status": "Disponível"
+
+        }
+
+        self.filmes.append(
+            novo_filme
+        )
+
+        self.atualizar_interface()
+
+        self.statusBar.showMessage(
+            f"Filme '{nome}' cadastrado."
+        )
+
+        QMessageBox.information(
+            self,
+            "Filme cadastrado",
+            f"O filme '{nome}' foi cadastrado com sucesso."
+        )
+
+    # ========================================================
+    # NOVO ALUGUEL
+    # ========================================================
+
+    def novo_aluguel(self):
+
+        disponiveis = [
+            filme
+            for filme in self.filmes
+            if filme["status"] == "Disponível"
+        ]
+
+        if not disponiveis:
+
+            QMessageBox.information(
+                self,
+                "Novo aluguel",
+                "Não existem filmes disponíveis."
+            )
+
+            return
+
+        nomes = [
+            filme["nome"]
+            for filme in disponiveis
+        ]
+
+        nome, ok = QInputDialog.getItem(
+            self,
+            "Novo aluguel",
+            "Selecione o filme:",
+            nomes,
+            0,
+            False
+        )
+
+        if not ok:
+            return
+
+        filme = next(
+            (
+                filme
+                for filme in disponiveis
+                if filme["nome"] == nome
+            ),
+            None
+        )
+
+        if filme:
+
+            self.alugar_filme(
+                filme["codigo"]
+            )
+
+    # ========================================================
+    # SOBRE
+    # ========================================================
+
+    def sobre(self):
+
+        QMessageBox.information(
+            self,
+            "Sobre",
+            "LOCADORA DE FILMES\n\n"
+            "Sistema desenvolvido em Python "
+            "com PySide6.\n\n"
+            "Funções disponíveis:\n"
+            "• Cadastro de filmes\n"
+            "• Remoção de filmes\n"
+            "• Cadastro de clientes\n"
+            "• Aluguel de filmes\n"
+            "• Devolução de filmes\n"
+            "• Pesquisa de filmes"
+        )
+
+    # ========================================================
+    # FECHAR PROGRAMA
+    # ========================================================
+
+    def closeEvent(self, event):
+
+        resposta = QMessageBox.question(
+            self,
+            "Sair",
+            "Deseja realmente sair da locadora?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if resposta == QMessageBox.Yes:
+
+            event.accept()
+
+        else:
+
+            event.ignore()
+
+
+
+if __name__ == "__main__":
+
+    app = QApplication(sys.argv)
+
+    janela = Locadora()
+
+    janela.show()
+
+    sys.exit(
+        app.exec()
+    )
