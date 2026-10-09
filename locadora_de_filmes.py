@@ -27,9 +27,6 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QPixmap
 
 
-# ============================================================
-# JANELA DE CADASTRO DE CLIENTE
-# ============================================================
 
 class JanelaCliente(QDialog):
 
@@ -108,9 +105,6 @@ class JanelaCliente(QDialog):
         self.accept()
 
 
-# ============================================================
-# JANELA DE CADASTRO DE FILME
-# ============================================================
 
 class JanelaFilme(QDialog):
 
@@ -219,9 +213,6 @@ class JanelaFilme(QDialog):
         self.accept()
 
 
-# ============================================================
-# JANELA PRINCIPAL
-# ============================================================
 
 class Locadora(QMainWindow):
 
@@ -231,12 +222,9 @@ class Locadora(QMainWindow):
 
         self.setWindowTitle("Locadora de Filmes")
 
-        # Abre a janela maximizada
+        
         self.showMaximized()
 
-        # ====================================================
-        # DADOS DOS FILMES
-        # ====================================================
 
         self.filmes = [
 
@@ -332,10 +320,7 @@ class Locadora(QMainWindow):
 
         ]
 
-        # ====================================================
-        # CLIENTES
-        # ====================================================
-
+       
         self.clientes = [
             {
                 "nome": "João Silva",
@@ -343,10 +328,6 @@ class Locadora(QMainWindow):
                 "email": "joao@email.com"
             }
         ]
-
-        # ====================================================
-        # ESTILO
-        # ====================================================
 
         self.setStyleSheet("""
 
@@ -449,22 +430,13 @@ class Locadora(QMainWindow):
 
         """)
 
-        # ====================================================
-        # MENU
-        # ====================================================
-
+    
         self.criar_menu()
 
-        # ====================================================
-        # TOOLBAR
-        # ====================================================
-
+       
         self.criar_toolbar()
 
-        # ====================================================
-        # STATUS BAR
-        # ====================================================
-
+        
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
 
@@ -472,9 +444,6 @@ class Locadora(QMainWindow):
             "Sistema de Locadora de Filmes"
         )
 
-        # ====================================================
-        # WIDGET PRINCIPAL
-        # ====================================================
 
         widget_principal = QWidget()
 
@@ -487,10 +456,7 @@ class Locadora(QMainWindow):
             20
         )
 
-        # ====================================================
-        # CABEÇALHO
-        # ====================================================
-
+      
         cabecalho = QHBoxLayout()
 
         titulo = QLabel("LOCADORA DE FILMES")
@@ -504,7 +470,7 @@ class Locadora(QMainWindow):
 
         cabecalho.addStretch()
 
-        # Botão cadastrar filme
+        
 
         self.btn_cadastro_filme = QPushButton(
             "+ Cadastrar filme"
@@ -518,7 +484,7 @@ class Locadora(QMainWindow):
             self.btn_cadastro_filme
         )
 
-        # Botão cadastrar cliente
+     
 
         self.btn_cadastro_cliente = QPushButton(
             "+ Cadastrar cliente"
@@ -536,14 +502,11 @@ class Locadora(QMainWindow):
             cabecalho
         )
 
-        # ====================================================
-        # PESQUISA
-        # ====================================================
-
+       
         self.pesquisa = QLineEdit()
 
         self.pesquisa.setPlaceholderText(
-            "Pesquisar filme..."
+            "Pesquisar por nome ou gênero..."
         )
 
         self.pesquisa.textChanged.connect(
@@ -554,10 +517,7 @@ class Locadora(QMainWindow):
             self.pesquisa
         )
 
-        # ====================================================
-        # ÁREA DOS FILMES
-        # ====================================================
-
+     
         self.scroll = QScrollArea()
 
         self.scroll.setWidgetResizable(True)
@@ -588,21 +548,15 @@ class Locadora(QMainWindow):
             widget_principal
         )
 
-        # ====================================================
-        # MOSTRAR FILMES
-        # ====================================================
+
 
         self.atualizar_interface()
 
-    # ========================================================
-    # MENU
-    # ========================================================
-
+   
     def criar_menu(self):
 
         menu = self.menuBar()
 
-        # ---------------- FILMES ----------------
 
         menu_filmes = menu.addMenu("Filmes")
 
@@ -647,7 +601,7 @@ class Locadora(QMainWindow):
             devolver
         )
 
-        # ---------------- CLIENTES ----------------
+
 
         menu_clientes = menu.addMenu("Clientes")
 
@@ -664,7 +618,6 @@ class Locadora(QMainWindow):
             novo_cliente
         )
 
-        # ---------------- SISTEMA ----------------
 
         menu_sistema = menu.addMenu("Sistema")
 
@@ -681,7 +634,6 @@ class Locadora(QMainWindow):
             sair
         )
 
-        # ---------------- AJUDA ----------------
 
         menu_ajuda = menu.addMenu("Ajuda")
 
@@ -698,9 +650,6 @@ class Locadora(QMainWindow):
             sobre
         )
 
-    # ========================================================
-    # TOOLBAR
-    # ========================================================
 
     def criar_toolbar(self):
 
@@ -775,13 +724,10 @@ class Locadora(QMainWindow):
             devolver
         )
 
-    # ========================================================
-    # ATUALIZAR INTERFACE
-    # ========================================================
 
     def atualizar_interface(self):
 
-        # Remove os cards antigos
+                                 
 
         while self.grid_filmes.count():
 
@@ -793,19 +739,19 @@ class Locadora(QMainWindow):
 
                 widget.deleteLater()
 
-        texto = self.pesquisa.text().lower()
+        texto = self.pesquisa.text().strip().casefold()
 
         filmes_filtrados = []
 
         for filme in self.filmes:
+            nome = filme["nome"].casefold()
+            genero = filme["genero"].casefold()
 
-            if texto in filme["nome"].lower():
+                                                                         
+            if texto in nome or texto in genero:
+                filmes_filtrados.append(filme)
 
-                filmes_filtrados.append(
-                    filme
-                )
-
-        # Cinco filmes por linha
+                                
 
         colunas = 5
 
@@ -832,9 +778,6 @@ class Locadora(QMainWindow):
             1
         )
 
-    # ========================================================
-    # CRIAR CARD DO FILME
-    # ========================================================
 
     def criar_card(self, filme):
 
@@ -859,10 +802,7 @@ class Locadora(QMainWindow):
             10
         )
 
-        # ====================================================
-        # CAPA
-        # ====================================================
-
+        
         capa = QLabel()
 
         capa.setFixedSize(
@@ -912,10 +852,6 @@ class Locadora(QMainWindow):
             capa
         )
 
-        # ====================================================
-        # NOME
-        # ====================================================
-
         nome = QLabel(
             filme["nome"]
         )
@@ -936,9 +872,6 @@ class Locadora(QMainWindow):
             nome
         )
 
-        # ====================================================
-        # INFORMAÇÕES
-        # ====================================================
 
         informacoes = QLabel(
             f"{filme['genero']} • {filme['ano']}"
@@ -957,9 +890,6 @@ class Locadora(QMainWindow):
             informacoes
         )
 
-        # ====================================================
-        # STATUS
-        # ====================================================
 
         status = QLabel(
             filme["status"]
@@ -979,13 +909,9 @@ class Locadora(QMainWindow):
             status
         )
 
-        # ====================================================
-        # BOTÕES
-        # ====================================================
-
         botoes = QHBoxLayout()
 
-        # Botão alugar
+        
 
         btn_alugar = QPushButton(
             "Alugar"
@@ -1001,7 +927,7 @@ class Locadora(QMainWindow):
             btn_alugar
         )
 
-        # Botão remover
+      
 
         btn_remover = QPushButton(
             "Remover"
@@ -1027,10 +953,7 @@ class Locadora(QMainWindow):
 
         return card
 
-    # ========================================================
-    # ALUGAR FILME
-    # ========================================================
-
+   
     def alugar_filme(self, codigo):
 
         filme = next(
@@ -1110,10 +1033,6 @@ class Locadora(QMainWindow):
             f"Prazo: {dias} dias"
         )
 
-    # ========================================================
-    # REMOVER FILME
-    # ========================================================
-
     def remover_filme(self, codigo):
 
         filme = next(
@@ -1128,7 +1047,6 @@ class Locadora(QMainWindow):
         if filme is None:
             return
 
-        # Confirmação
 
         resposta = QMessageBox.question(
             self,
@@ -1159,10 +1077,6 @@ class Locadora(QMainWindow):
                 f"O filme '{nome_filme}' "
                 f"foi removido com sucesso."
             )
-
-    # ========================================================
-    # ESCOLHER FILME PARA REMOVER
-    # ========================================================
 
     def selecionar_filme_remover(self):
 
@@ -1207,10 +1121,6 @@ class Locadora(QMainWindow):
             self.remover_filme(
                 filme["codigo"]
             )
-
-    # ========================================================
-    # DEVOLVER FILME
-    # ========================================================
 
     def devolver_filme(self):
 
@@ -1267,10 +1177,6 @@ class Locadora(QMainWindow):
             f"O filme '{nome}' está disponível novamente."
         )
 
-    # ========================================================
-    # ABRIR CADASTRO DE CLIENTE
-    # ========================================================
-
     def abrir_cliente(self):
 
         janela = JanelaCliente(
@@ -1283,10 +1189,7 @@ class Locadora(QMainWindow):
 
         janela.exec()
 
-    # ========================================================
-    # ADICIONAR CLIENTE
-    # ========================================================
-
+ 
     def adicionar_cliente(
         self,
         nome,
@@ -1312,10 +1215,7 @@ class Locadora(QMainWindow):
             f"Cliente '{nome}' cadastrado."
         )
 
-    # ========================================================
-    # ABRIR CADASTRO DE FILME
-    # ========================================================
-
+  
     def abrir_filme(self):
 
         janela = JanelaFilme(
@@ -1328,10 +1228,7 @@ class Locadora(QMainWindow):
 
         janela.exec()
 
-    # ========================================================
-    # ADICIONAR FILME
-    # ========================================================
-
+    
     def adicionar_filme(
         self,
         nome,
@@ -1376,9 +1273,6 @@ class Locadora(QMainWindow):
             f"O filme '{nome}' foi cadastrado com sucesso."
         )
 
-    # ========================================================
-    # NOVO ALUGUEL
-    # ========================================================
 
     def novo_aluguel(self):
 
@@ -1430,9 +1324,6 @@ class Locadora(QMainWindow):
                 filme["codigo"]
             )
 
-    # ========================================================
-    # SOBRE
-    # ========================================================
 
     def sobre(self):
 
@@ -1451,10 +1342,7 @@ class Locadora(QMainWindow):
             "• Pesquisa de filmes"
         )
 
-    # ========================================================
-    # FECHAR PROGRAMA
-    # ========================================================
-
+   
     def closeEvent(self, event):
 
         resposta = QMessageBox.question(
