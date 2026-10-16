@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -25,7 +26,6 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QPixmap
-
 
 
 class JanelaCliente(QDialog):
@@ -103,7 +103,6 @@ class JanelaCliente(QDialog):
         )
 
         self.accept()
-
 
 
 class JanelaFilme(QDialog):
@@ -213,6 +212,65 @@ class JanelaFilme(QDialog):
         self.accept()
 
 
+# ============================================================
+# PERSISTÊNCIA EM ARQUIVO (Trabalho 02)
+# ============================================================
+#
+# Os dados de filmes e clientes deixam de existir só em memória:
+# agora são lidos de / gravados em arquivos .json na pasta "dados",
+# que fica ao lado deste script. Não é um SGBD (banco de dados) —
+# é leitura e escrita direta de arquivo, como pede o Trabalho 02.
+
+PASTA_DADOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dados")
+ARQUIVO_FILMES = os.path.join(PASTA_DADOS, "filmes.json")
+ARQUIVO_CLIENTES = os.path.join(PASTA_DADOS, "clientes.json")
+
+FILMES_PADRAO = [
+    {"codigo": 1, "nome": "Interestelar", "genero": "Ficção Científica", "ano": 2014, "capa": "interestelar.jpg", "status": "Disponível"},
+    {"codigo": 2, "nome": "O Poderoso Chefão", "genero": "Drama", "ano": 1972, "capa": "poderoso_chefao.jpg", "status": "Disponível"},
+    {"codigo": 3, "nome": "Vingadores", "genero": "Ação", "ano": 2012, "capa": "vingadores.jpg", "status": "Disponível"},
+    {"codigo": 4, "nome": "Toy Story", "genero": "Animação", "ano": 1995, "capa": "toy_story.jpg", "status": "Disponível"},
+    {"codigo": 5, "nome": "Batman", "genero": "Ação", "ano": 2022, "capa": "batman.jpg", "status": "Disponível"},
+    {"codigo": 6, "nome": "Titanic", "genero": "Romance", "ano": 1997, "capa": "titanic.jpg", "status": "Disponível"},
+    {"codigo": 7, "nome": "Jurassic Park", "genero": "Aventura", "ano": 1993, "capa": "jurassic_park.jpg", "status": "Disponível"},
+    {"codigo": 8, "nome": "Corra!", "genero": "Terror", "ano": 2017, "capa": "corra.jpg", "status": "Disponível"},
+    {"codigo": 9, "nome": "O Rei Leão", "genero": "Animação", "ano": 1994, "capa": "rei_leao.jpg", "status": "Disponível"},
+    {"codigo": 10, "nome": "Homem-Aranha", "genero": "Ação", "ano": 2018, "capa": "homem_aranha.jpg", "status": "Disponível"},
+]
+
+CLIENTES_PADRAO = [
+    {"nome": "João Silva", "telefone": "(89) 99999-9999", "email": "joao@email.com"},
+]
+
+
+def carregar_json(caminho, dados_padrao):
+    """Lê uma lista de dicts de um arquivo .json.
+    Se o arquivo não existir ou estiver corrompido, cria/recria com os dados padrão."""
+
+    if os.path.exists(caminho):
+        try:
+            with open(caminho, "r", encoding="utf-8") as arquivo:
+                return json.load(arquivo)
+        except (json.JSONDecodeError, OSError):
+            QMessageBox.warning(
+                None,
+                "Arquivo de dados corrompido",
+                f"Não foi possível ler '{os.path.basename(caminho)}'. "
+                "Os dados padrão serão restaurados."
+            )
+
+    salvar_json(caminho, dados_padrao)
+    return [dict(item) for item in dados_padrao]
+
+
+def salvar_json(caminho, dados):
+    """Grava uma lista de dicts em um arquivo .json, criando a pasta 'dados' se preciso."""
+
+    os.makedirs(os.path.dirname(caminho), exist_ok=True)
+
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        json.dump(dados, arquivo, ensure_ascii=False, indent=4)
+
 
 class Locadora(QMainWindow):
 
@@ -222,112 +280,14 @@ class Locadora(QMainWindow):
 
         self.setWindowTitle("Locadora de Filmes")
 
-        
         self.showMaximized()
 
+        # ====================================================
+        # DADOS DOS FILMES E CLIENTES (agora vindos de arquivo)
+        # ====================================================
 
-        self.filmes = [
-
-            {
-                "codigo": 1,
-                "nome": "Interestelar",
-                "genero": "Ficção Científica",
-                "ano": 2014,
-                "capa": "interestelar.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 2,
-                "nome": "O Poderoso Chefão",
-                "genero": "Drama",
-                "ano": 1972,
-                "capa": "poderoso_chefao.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 3,
-                "nome": "Vingadores",
-                "genero": "Ação",
-                "ano": 2012,
-                "capa": "vingadores.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 4,
-                "nome": "Toy Story",
-                "genero": "Animação",
-                "ano": 1995,
-                "capa": "toy_story.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 5,
-                "nome": "Batman",
-                "genero": "Ação",
-                "ano": 2022,
-                "capa": "batman.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 6,
-                "nome": "Titanic",
-                "genero": "Romance",
-                "ano": 1997,
-                "capa": "titanic.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 7,
-                "nome": "Jurassic Park",
-                "genero": "Aventura",
-                "ano": 1993,
-                "capa": "jurassic_park.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 8,
-                "nome": "Corra!",
-                "genero": "Terror",
-                "ano": 2017,
-                "capa": "corra.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 9,
-                "nome": "O Rei Leão",
-                "genero": "Animação",
-                "ano": 1994,
-                "capa": "rei_leao.jpg",
-                "status": "Disponível"
-            },
-
-            {
-                "codigo": 10,
-                "nome": "Homem-Aranha",
-                "genero": "Ação",
-                "ano": 2018,
-                "capa": "homem_aranha.jpg",
-                "status": "Disponível"
-            }
-
-        ]
-
-       
-        self.clientes = [
-            {
-                "nome": "João Silva",
-                "telefone": "(89) 99999-9999",
-                "email": "joao@email.com"
-            }
-        ]
+        self.filmes = carregar_json(ARQUIVO_FILMES, FILMES_PADRAO)
+        self.clientes = carregar_json(ARQUIVO_CLIENTES, CLIENTES_PADRAO)
 
         self.setStyleSheet("""
 
@@ -430,20 +390,16 @@ class Locadora(QMainWindow):
 
         """)
 
-    
         self.criar_menu()
 
-       
         self.criar_toolbar()
 
-        
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
 
         self.statusBar.showMessage(
             "Sistema de Locadora de Filmes"
         )
-
 
         widget_principal = QWidget()
 
@@ -456,7 +412,6 @@ class Locadora(QMainWindow):
             20
         )
 
-      
         cabecalho = QHBoxLayout()
 
         titulo = QLabel("LOCADORA DE FILMES")
@@ -470,8 +425,6 @@ class Locadora(QMainWindow):
 
         cabecalho.addStretch()
 
-        
-
         self.btn_cadastro_filme = QPushButton(
             "+ Cadastrar filme"
         )
@@ -483,8 +436,6 @@ class Locadora(QMainWindow):
         cabecalho.addWidget(
             self.btn_cadastro_filme
         )
-
-     
 
         self.btn_cadastro_cliente = QPushButton(
             "+ Cadastrar cliente"
@@ -502,7 +453,6 @@ class Locadora(QMainWindow):
             cabecalho
         )
 
-       
         self.pesquisa = QLineEdit()
 
         self.pesquisa.setPlaceholderText(
@@ -517,7 +467,6 @@ class Locadora(QMainWindow):
             self.pesquisa
         )
 
-     
         self.scroll = QScrollArea()
 
         self.scroll.setWidgetResizable(True)
@@ -548,15 +497,11 @@ class Locadora(QMainWindow):
             widget_principal
         )
 
-
-
         self.atualizar_interface()
 
-   
     def criar_menu(self):
 
         menu = self.menuBar()
-
 
         menu_filmes = menu.addMenu("Filmes")
 
@@ -601,8 +546,6 @@ class Locadora(QMainWindow):
             devolver
         )
 
-
-
         menu_clientes = menu.addMenu("Clientes")
 
         novo_cliente = QAction(
@@ -617,7 +560,6 @@ class Locadora(QMainWindow):
         menu_clientes.addAction(
             novo_cliente
         )
-
 
         menu_sistema = menu.addMenu("Sistema")
 
@@ -634,7 +576,6 @@ class Locadora(QMainWindow):
             sair
         )
 
-
         menu_ajuda = menu.addMenu("Ajuda")
 
         sobre = QAction(
@@ -649,7 +590,6 @@ class Locadora(QMainWindow):
         menu_ajuda.addAction(
             sobre
         )
-
 
     def criar_toolbar(self):
 
@@ -724,10 +664,7 @@ class Locadora(QMainWindow):
             devolver
         )
 
-
     def atualizar_interface(self):
-
-                                 
 
         while self.grid_filmes.count():
 
@@ -747,11 +684,8 @@ class Locadora(QMainWindow):
             nome = filme["nome"].casefold()
             genero = filme["genero"].casefold()
 
-                                                                         
             if texto in nome or texto in genero:
                 filmes_filtrados.append(filme)
-
-                                
 
         colunas = 5
 
@@ -778,7 +712,6 @@ class Locadora(QMainWindow):
             1
         )
 
-
     def criar_card(self, filme):
 
         card = QFrame()
@@ -802,7 +735,6 @@ class Locadora(QMainWindow):
             10
         )
 
-        
         capa = QLabel()
 
         capa.setFixedSize(
@@ -872,7 +804,6 @@ class Locadora(QMainWindow):
             nome
         )
 
-
         informacoes = QLabel(
             f"{filme['genero']} • {filme['ano']}"
         )
@@ -889,7 +820,6 @@ class Locadora(QMainWindow):
         layout.addWidget(
             informacoes
         )
-
 
         status = QLabel(
             filme["status"]
@@ -911,8 +841,6 @@ class Locadora(QMainWindow):
 
         botoes = QHBoxLayout()
 
-        
-
         btn_alugar = QPushButton(
             "Alugar"
         )
@@ -926,8 +854,6 @@ class Locadora(QMainWindow):
         botoes.addWidget(
             btn_alugar
         )
-
-      
 
         btn_remover = QPushButton(
             "Remover"
@@ -953,7 +879,6 @@ class Locadora(QMainWindow):
 
         return card
 
-   
     def alugar_filme(self, codigo):
 
         filme = next(
@@ -1021,6 +946,8 @@ class Locadora(QMainWindow):
 
         self.atualizar_interface()
 
+        salvar_json(ARQUIVO_FILMES, self.filmes)
+
         self.statusBar.showMessage(
             f"{filme['nome']} alugado para {cliente} por {dias} dias."
         )
@@ -1047,7 +974,6 @@ class Locadora(QMainWindow):
         if filme is None:
             return
 
-
         resposta = QMessageBox.question(
             self,
             "Remover filme",
@@ -1066,6 +992,8 @@ class Locadora(QMainWindow):
             )
 
             self.atualizar_interface()
+
+            salvar_json(ARQUIVO_FILMES, self.filmes)
 
             self.statusBar.showMessage(
                 f"Filme '{nome_filme}' removido."
@@ -1167,6 +1095,8 @@ class Locadora(QMainWindow):
 
         self.atualizar_interface()
 
+        salvar_json(ARQUIVO_FILMES, self.filmes)
+
         self.statusBar.showMessage(
             f"{nome} devolvido com sucesso."
         )
@@ -1189,7 +1119,6 @@ class Locadora(QMainWindow):
 
         janela.exec()
 
- 
     def adicionar_cliente(
         self,
         nome,
@@ -1205,6 +1134,8 @@ class Locadora(QMainWindow):
 
         })
 
+        salvar_json(ARQUIVO_CLIENTES, self.clientes)
+
         QMessageBox.information(
             self,
             "Cliente cadastrado",
@@ -1215,7 +1146,6 @@ class Locadora(QMainWindow):
             f"Cliente '{nome}' cadastrado."
         )
 
-  
     def abrir_filme(self):
 
         janela = JanelaFilme(
@@ -1228,7 +1158,6 @@ class Locadora(QMainWindow):
 
         janela.exec()
 
-    
     def adicionar_filme(
         self,
         nome,
@@ -1263,6 +1192,8 @@ class Locadora(QMainWindow):
 
         self.atualizar_interface()
 
+        salvar_json(ARQUIVO_FILMES, self.filmes)
+
         self.statusBar.showMessage(
             f"Filme '{nome}' cadastrado."
         )
@@ -1272,7 +1203,6 @@ class Locadora(QMainWindow):
             "Filme cadastrado",
             f"O filme '{nome}' foi cadastrado com sucesso."
         )
-
 
     def novo_aluguel(self):
 
@@ -1324,7 +1254,6 @@ class Locadora(QMainWindow):
                 filme["codigo"]
             )
 
-
     def sobre(self):
 
         QMessageBox.information(
@@ -1339,10 +1268,11 @@ class Locadora(QMainWindow):
             "• Cadastro de clientes\n"
             "• Aluguel de filmes\n"
             "• Devolução de filmes\n"
-            "• Pesquisa de filmes"
+            "• Pesquisa de filmes\n\n"
+            "Os dados são salvos automaticamente em arquivos .json "
+            "na pasta 'dados'."
         )
 
-   
     def closeEvent(self, event):
 
         resposta = QMessageBox.question(
@@ -1360,7 +1290,6 @@ class Locadora(QMainWindow):
         else:
 
             event.ignore()
-
 
 
 if __name__ == "__main__":
