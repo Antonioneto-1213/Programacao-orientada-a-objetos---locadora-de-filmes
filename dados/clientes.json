@@ -3,5 +3,15 @@
         "nome": "João Silva",
         "telefone": "(89) 99999-9999",
         "email": "joao@email.com"
+    },
+    {
+        "nome": "antonio neto",
+        "telefone": "85998721453",
+        "email": "antneto1213@gmail.com"
+    },
+    {
+        "nome": "ana julia",
+        "telefone": "89 998456789",
+        "email": "anonino@gmail.com"
     }
 ]

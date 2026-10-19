@@ -78,5 +78,13 @@
         "ano": 2018,
         "capa": "homem_aranha.jpg",
         "status": "Disponível"
+    },
+    {
+        "codigo": 11,
+        "nome": "duna - parte 1",
+        "genero": "Ficção Científica",
+        "ano": 2024,
+        "capa": "",
+        "status": "Disponível"
     }
 ]
