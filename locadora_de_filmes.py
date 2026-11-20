@@ -1,7 +1,7 @@
 import sys
 import os
-import json
 import time
+import requests
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -28,43 +28,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QThread
 from PySide6.QtGui import QAction, QPixmap
 
-
-class BackupThread(QThread):
-    backup_concluido = Signal(str)
-
-    def __init__(self, filmes, clientes, parent=None):
-        super().__init__(parent)
-        self.filmes = filmes
-        self.clientes = clientes
-        self.rodando = True
-
-    def run(self):
-        pasta_backup = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backup")
-        os.makedirs(pasta_backup, exist_ok=True)
-        
-        while self.rodando:
-            time.sleep(60) 
-            
-            if not self.rodando:
-                break
-                
-            arquivo_filmes_backup = os.path.join(pasta_backup, "filmes_backup.json")
-            arquivo_clientes_backup = os.path.join(pasta_backup, "clientes_backup.json")
-            
-            try:
-                with open(arquivo_filmes_backup, "w", encoding="utf-8") as f:
-                    json.dump(self.filmes, f, ensure_ascii=False, indent=4)
-                    
-                with open(arquivo_clientes_backup, "w", encoding="utf-8") as c:
-                    json.dump(self.clientes, c, ensure_ascii=False, indent=4)
-                
-                self.backup_concluido.emit("Backup automático salvo em background!")
-            except Exception as e:
-                print(f"Erro no backup automático: {e}")
-
-    def parar(self):
-        self.rodando = False
-        self.wait()
+# Endereço base da sua API
+API_URL = "http://127.0.0.1:8000"
 
 
 class JanelaCliente(QDialog):
@@ -175,45 +140,6 @@ class JanelaFilme(QDialog):
         self.accept()
 
 
-PASTA_DADOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dados")
-ARQUIVO_FILMES = os.path.join(PASTA_DADOS, "filmes.json")
-ARQUIVO_CLIENTES = os.path.join(PASTA_DADOS, "clientes.json")
-
-FILMES_PADRAO = [
-    {"codigo": 1, "nome": "Interestelar", "genero": "Ficção Científica", "ano": 2014, "capa": "interestelar.jpg", "status": "Disponível"},
-    {"codigo": 2, "nome": "O Poderoso Chefão", "genero": "Drama", "ano": 1972, "capa": "poderoso_chefao.jpg", "status": "Disponível"},
-    {"codigo": 3, "nome": "Vingadores", "genero": "Ação", "ano": 2012, "capa": "vingadores.jpg", "status": "Disponível"},
-    {"codigo": 4, "nome": "Toy Story", "genero": "Animação", "ano": 1995, "capa": "toy_story.jpg", "status": "Disponível"},
-    {"codigo": 5, "nome": "Batman", "genero": "Ação", "ano": 2022, "capa": "batman.jpg", "status": "Disponível"},
-    {"codigo": 6, "nome": "Titanic", "genero": "Romance", "ano": 1997, "capa": "titanic.jpg", "status": "Disponível"},
-    {"codigo": 7, "nome": "Jurassic Park", "genero": "Aventura", "ano": 1993, "capa": "jurassic_park.jpg", "status": "Disponível"},
-    {"codigo": 8, "nome": "Corra!", "genero": "Terror", "ano": 2017, "capa": "corra.jpg", "status": "Disponível"},
-    {"codigo": 9, "nome": "O Rei Leão", "genero": "Animação", "ano": 1994, "capa": "rei_leao.jpg", "status": "Disponível"},
-    {"codigo": 10, "nome": "Homem-Aranha", "genero": "Ação", "ano": 2018, "capa": "homem_aranha.jpg", "status": "Disponível"},
-]
-
-CLIENTES_PADRAO = [
-    {"nome": "João Silva", "telefone": "(89) 99999-9999", "email": "joao@email.com"},
-]
-
-
-def carregar_json(caminho, dados_padrao):
-    if os.path.exists(caminho):
-        try:
-            with open(caminho, "r", encoding="utf-8") as arquivo:
-                return json.load(arquivo)
-        except (json.JSONDecodeError, OSError):
-            QMessageBox.warning(None, "Arquivo de dados corrompido", f"Não foi possível ler '{os.path.basename(caminho)}'. Os dados padrão serão restaurados.")
-    salvar_json(caminho, dados_padrao)
-    return [dict(item) for item in dados_padrao]
-
-
-def salvar_json(caminho, dados):
-    os.makedirs(os.path.dirname(caminho), exist_ok=True)
-    with open(caminho, "w", encoding="utf-8") as arquivo:
-        json.dump(dados, arquivo, ensure_ascii=False, indent=4)
-
-
 class Locadora(QMainWindow):
 
     def __init__(self):
@@ -221,12 +147,8 @@ class Locadora(QMainWindow):
         self.setWindowTitle("Locadora de Filmes")
         self.showMaximized()
 
-        self.filmes = carregar_json(ARQUIVO_FILMES, FILMES_PADRAO)
-        self.clientes = carregar_json(ARQUIVO_CLIENTES, CLIENTES_PADRAO)
-        
-        self.thread_backup = BackupThread(self.filmes, self.clientes)
-        self.thread_backup.backup_concluido.connect(self.mostrar_msg_backup)
-        self.thread_backup.start()
+        self.filmes = []
+        self.clientes = []
 
         self.setStyleSheet("""
             QMainWindow { background-color: #0b1120; }
@@ -254,7 +176,7 @@ class Locadora(QMainWindow):
 
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
-        self.statusBar.showMessage("Sistema de Locadora de Filmes")
+        self.statusBar.showMessage("Conectando ao banco de dados...")
 
         widget_principal = QWidget()
         layout_principal = QVBoxLayout()
@@ -292,10 +214,26 @@ class Locadora(QMainWindow):
 
         widget_principal.setLayout(layout_principal)
         self.setCentralWidget(widget_principal)
-        self.atualizar_interface()
+        
+        # Carrega os dados da API ao iniciar
+        self.carregar_dados_api()
 
-    def mostrar_msg_backup(self, mensagem):
-        self.statusBar.showMessage(mensagem, 3000)
+    def carregar_dados_api(self):
+        try:
+            res_filmes = requests.get(f"{API_URL}/filmes")
+            res_clientes = requests.get(f"{API_URL}/clientes")
+            
+            if res_filmes.status_code == 200:
+                self.filmes = res_filmes.json()
+            if res_clientes.status_code == 200:
+                self.clientes = res_clientes.json()
+                
+            self.statusBar.showMessage("Conectado à API com sucesso!", 5000)
+            self.atualizar_interface()
+            
+        except requests.exceptions.ConnectionError:
+            self.statusBar.showMessage("Erro: Não foi possível conectar à API. Verifique se o servidor está rodando.")
+            QMessageBox.critical(self, "Erro de Conexão", "O servidor da API não está rodando.\n\nPor favor, inicie o Uvicorn no terminal.")
 
     def criar_menu(self):
         menu = self.menuBar()
@@ -422,23 +360,37 @@ class Locadora(QMainWindow):
         if not ok: return
         dias, ok = QInputDialog.getInt(self, "Período do aluguel", "Quantidade de dias:", 3, 1, 30)
         if not ok: return
-        filme["status"] = "Alugado"
-        self.atualizar_interface()
-        salvar_json(ARQUIVO_FILMES, self.filmes)
-        self.statusBar.showMessage(f"{filme['nome']} alugado para {cliente} por {dias} dias.")
-        QMessageBox.information(self, "Aluguel realizado", f"Filme: {filme['nome']}\nCliente: {cliente}\nPrazo: {dias} dias")
+        
+        # Envia a atualização para a API
+        try:
+            res = requests.put(f"{API_URL}/filmes/{codigo}?status=Alugado")
+            if res.status_code == 200:
+                filme["status"] = "Alugado"
+                self.atualizar_interface()
+                self.statusBar.showMessage(f"{filme['nome']} alugado para {cliente} por {dias} dias.")
+                QMessageBox.information(self, "Aluguel realizado", f"Filme: {filme['nome']}\nCliente: {cliente}\nPrazo: {dias} dias")
+            else:
+                QMessageBox.warning(self, "Erro", "Não foi possível alugar o filme no servidor.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
 
     def remover_filme(self, codigo):
         filme = next((f for f in self.filmes if f["codigo"] == codigo), None)
         if filme is None: return
         resposta = QMessageBox.question(self, "Remover filme", f"Tem certeza que deseja remover o filme:\n\n{filme['nome']}?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if resposta == QMessageBox.Yes:
-            nome_filme = filme["nome"]
-            self.filmes.remove(filme)
-            self.atualizar_interface()
-            salvar_json(ARQUIVO_FILMES, self.filmes)
-            self.statusBar.showMessage(f"Filme '{nome_filme}' removido.")
-            QMessageBox.information(self, "Filme removido", f"O filme '{nome_filme}' foi removido com sucesso.")
+            try:
+                res = requests.delete(f"{API_URL}/filmes/{codigo}")
+                if res.status_code == 200:
+                    nome_filme = filme["nome"]
+                    self.filmes.remove(filme)
+                    self.atualizar_interface()
+                    self.statusBar.showMessage(f"Filme '{nome_filme}' removido.")
+                    QMessageBox.information(self, "Filme removido", f"O filme '{nome_filme}' foi removido com sucesso.")
+                else:
+                    QMessageBox.warning(self, "Erro", "Não foi possível remover o filme no servidor.")
+            except Exception as e:
+                QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
 
     def selecionar_filme_remover(self):
         if not self.filmes:
@@ -459,14 +411,20 @@ class Locadora(QMainWindow):
         nomes = [filme["nome"] for filme in alugados]
         nome, ok = QInputDialog.getItem(self, "Devolver filme", "Selecione o filme:", nomes, 0, False)
         if not ok: return
-        for filme in alugados:
-            if filme["nome"] == nome:
-                filme["status"] = "Disponível"
-                break
-        self.atualizar_interface()
-        salvar_json(ARQUIVO_FILMES, self.filmes)
-        self.statusBar.showMessage(f"{nome} devolvido com sucesso.")
-        QMessageBox.information(self, "Devolução realizada", f"O filme '{nome}' está disponível novamente.")
+        
+        filme_alvo = next((f for f in alugados if f["nome"] == nome), None)
+        if filme_alvo:
+            try:
+                res = requests.put(f"{API_URL}/filmes/{filme_alvo['codigo']}?status=Disponível")
+                if res.status_code == 200:
+                    filme_alvo["status"] = "Disponível"
+                    self.atualizar_interface()
+                    self.statusBar.showMessage(f"{nome} devolvido com sucesso.")
+                    QMessageBox.information(self, "Devolução realizada", f"O filme '{nome}' está disponível novamente.")
+                else:
+                    QMessageBox.warning(self, "Erro", "Não foi possível devolver o filme no servidor.")
+            except Exception as e:
+                QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
 
     def abrir_cliente(self):
         janela = JanelaCliente(self)
@@ -474,10 +432,17 @@ class Locadora(QMainWindow):
         janela.exec()
 
     def adicionar_cliente(self, nome, telefone, email):
-        self.clientes.append({"nome": nome, "telefone": telefone, "email": email})
-        salvar_json(ARQUIVO_CLIENTES, self.clientes)
-        QMessageBox.information(self, "Cliente cadastrado", f"Cliente '{nome}' cadastrado com sucesso.")
-        self.statusBar.showMessage(f"Cliente '{nome}' cadastrado.")
+        novo_cliente = {"nome": nome, "telefone": telefone, "email": email}
+        try:
+            res = requests.post(f"{API_URL}/clientes", json=novo_cliente)
+            if res.status_code == 200:
+                self.clientes.append(novo_cliente)
+                QMessageBox.information(self, "Cliente cadastrado", f"Cliente '{nome}' cadastrado com sucesso.")
+                self.statusBar.showMessage(f"Cliente '{nome}' cadastrado.")
+            else:
+                QMessageBox.warning(self, "Erro", "Não foi possível cadastrar o cliente no servidor.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
 
     def abrir_filme(self):
         janela = JanelaFilme(self)
@@ -485,15 +450,25 @@ class Locadora(QMainWindow):
         janela.exec()
 
     def adicionar_filme(self, nome, genero, ano, capa):
-        novo_codigo = 1
-        if self.filmes:
-            novo_codigo = max(filme["codigo"] for filme in self.filmes) + 1
-        novo_filme = {"codigo": novo_codigo, "nome": nome, "genero": genero, "ano": ano, "capa": capa, "status": "Disponível"}
-        self.filmes.append(novo_filme)
-        self.atualizar_interface()
-        salvar_json(ARQUIVO_FILMES, self.filmes)
-        self.statusBar.showMessage(f"Filme '{nome}' cadastrado.")
-        QMessageBox.information(self, "Filme cadastrado", f"O filme '{nome}' foi cadastrado com sucesso.")
+        novo_filme = {
+            "nome": nome,
+            "genero": genero,
+            "ano": ano,
+            "capa": capa,
+            "status": "Disponível"
+        }
+        try:
+            res = requests.post(f"{API_URL}/filmes", json=novo_filme)
+            if res.status_code == 200:
+                filme_salvo = res.json()
+                self.filmes.append(filme_salvo)
+                self.atualizar_interface()
+                self.statusBar.showMessage(f"Filme '{nome}' cadastrado.")
+                QMessageBox.information(self, "Filme cadastrado", f"O filme '{nome}' foi cadastrado com sucesso.")
+            else:
+                QMessageBox.warning(self, "Erro", "Não foi possível cadastrar o filme no servidor.")
+        except Exception as e:
+             QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
 
     def novo_aluguel(self):
         disponiveis = [filme for filme in self.filmes if filme["status"] == "Disponível"]
@@ -508,12 +483,11 @@ class Locadora(QMainWindow):
             self.alugar_filme(filme["codigo"])
 
     def sobre(self):
-        QMessageBox.information(self, "Sobre", "LOCADORA DE FILMES\n\nSistema desenvolvido em Python com PySide6.\n\nFunções disponíveis:\n• Cadastro de filmes\n• Remoção de filmes\n• Cadastro de clientes\n• Aluguel de filmes\n• Devolução de filmes\n• Pesquisa de filmes\n\nOs dados são salvos automaticamente em arquivos .json na pasta 'dados'.")
+        QMessageBox.information(self, "Sobre", "LOCADORA DE FILMES (Versão API)\n\nSistema desenvolvido em Python com PySide6 e FastAPI.\n\nAgora conectado a um banco de dados SQLite real via API!")
 
     def closeEvent(self, event):
         resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if resposta == QMessageBox.Yes:
-            self.thread_backup.parar()
             event.accept()
         else:
             event.ignore()
