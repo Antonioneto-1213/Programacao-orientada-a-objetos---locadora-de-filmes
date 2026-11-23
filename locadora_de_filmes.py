@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QThread
 from PySide6.QtGui import QAction, QPixmap
 
-# Endereço base da sua API
 API_URL = "http://127.0.0.1:8000"
 
 
@@ -215,7 +214,6 @@ class Locadora(QMainWindow):
         widget_principal.setLayout(layout_principal)
         self.setCentralWidget(widget_principal)
         
-        # Carrega os dados da API ao iniciar
         self.carregar_dados_api()
 
     def carregar_dados_api(self):
@@ -233,7 +231,11 @@ class Locadora(QMainWindow):
             
         except requests.exceptions.ConnectionError:
             self.statusBar.showMessage("Erro: Não foi possível conectar à API. Verifique se o servidor está rodando.")
-            QMessageBox.critical(self, "Erro de Conexão", "O servidor da API não está rodando.\n\nPor favor, inicie o Uvicorn no terminal.")
+            QMessageBox.critical(
+                self,
+                "Erro de Conexão",
+                "O servidor da API não está rodando.\n\nPor favor, inicie os contêineres com 'docker compose up -d'."
+            )
 
     def criar_menu(self):
         menu = self.menuBar()
@@ -282,6 +284,10 @@ class Locadora(QMainWindow):
         devolver = QAction("Devolver", self)
         devolver.triggered.connect(self.devolver_filme)
         toolbar.addAction(devolver)
+        toolbar.addSeparator()
+        atualizar = QAction("Atualizar", self)
+        atualizar.triggered.connect(self.carregar_dados_api)
+        toolbar.addAction(atualizar)
 
     def atualizar_interface(self):
         while self.grid_filmes.count():
@@ -356,23 +362,37 @@ class Locadora(QMainWindow):
             QMessageBox.warning(self, "Nenhum cliente", "Cadastre um cliente antes de realizar um aluguel.")
             return
         nomes = [cliente["nome"] for cliente in self.clientes]
-        cliente, ok = QInputDialog.getItem(self, "Alugar filme", "Selecione o cliente:", nomes, 0, False)
+        cliente_nome, ok = QInputDialog.getItem(self, "Alugar filme", "Selecione o cliente:", nomes, 0, False)
         if not ok: return
         dias, ok = QInputDialog.getInt(self, "Período do aluguel", "Quantidade de dias:", 3, 1, 30)
         if not ok: return
-        
-        # Envia a atualização para a API
+
+        cliente_obj = next((c for c in self.clientes if c["nome"] == cliente_nome), None)
+        if not cliente_obj or "id" not in cliente_obj:
+            QMessageBox.warning(self, "Erro", "ID do cliente não encontrado. Reinicie o aplicativo para sincronizar.")
+            return
+
+       
         try:
-            res = requests.put(f"{API_URL}/filmes/{codigo}?status=Alugado")
+            res = requests.post(
+                f"{API_URL}/alugueis",
+                json={"filme_codigo": codigo, "cliente_id": cliente_obj["id"]}
+            )
             if res.status_code == 200:
                 filme["status"] = "Alugado"
                 self.atualizar_interface()
-                self.statusBar.showMessage(f"{filme['nome']} alugado para {cliente} por {dias} dias.")
-                QMessageBox.information(self, "Aluguel realizado", f"Filme: {filme['nome']}\nCliente: {cliente}\nPrazo: {dias} dias")
+                self.statusBar.showMessage(f"{filme['nome']} alugado para {cliente_nome} por {dias} dias.")
+                QMessageBox.information(self, "Aluguel realizado", f"Filme: {filme['nome']}\nCliente: {cliente_nome}\nPrazo: {dias} dias")
             else:
-                QMessageBox.warning(self, "Erro", "Não foi possível alugar o filme no servidor.")
+                detalhe = res.json().get("detail", "Não foi possível alugar o filme no servidor.")
+                QMessageBox.warning(self, "Erro", detalhe)
         except Exception as e:
-            QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
+            QMessageBox.critical(
+                self,
+                "Erro de Conexão",
+                "O servidor da API não está rodando.\n\nPor favor, inicie os contêineres com 'docker compose up -d'."
+            )
+        
 
     def remover_filme(self, codigo):
         filme = next((f for f in self.filmes if f["codigo"] == codigo), None)
@@ -390,7 +410,11 @@ class Locadora(QMainWindow):
                 else:
                     QMessageBox.warning(self, "Erro", "Não foi possível remover o filme no servidor.")
             except Exception as e:
-                QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
+                QMessageBox.critical(
+                self,
+                "Erro de Conexão",
+                "O servidor da API não está rodando.\n\nPor favor, inicie os contêineres com 'docker compose up -d'."
+            )
 
     def selecionar_filme_remover(self):
         if not self.filmes:
@@ -415,7 +439,19 @@ class Locadora(QMainWindow):
         filme_alvo = next((f for f in alugados if f["nome"] == nome), None)
         if filme_alvo:
             try:
-                res = requests.put(f"{API_URL}/filmes/{filme_alvo['codigo']}?status=Disponível")
+                res_alugueis = requests.get(f"{API_URL}/alugueis")
+                alugueis = res_alugueis.json() if res_alugueis.status_code == 200 else []
+                aluguel_ativo = next(
+                    (a for a in alugueis if a["filme_codigo"] == filme_alvo["codigo"] and a["status"] == "Ativo"),
+                    None
+                )
+
+                if aluguel_ativo:
+                    res = requests.put(f"{API_URL}/alugueis/{aluguel_ativo['id']}/devolver")
+                else:
+                    # Fallback caso seja um filme alugado antes da tabela existir
+                    res = requests.put(f"{API_URL}/filmes/{filme_alvo['codigo']}?status=Disponível")
+
                 if res.status_code == 200:
                     filme_alvo["status"] = "Disponível"
                     self.atualizar_interface()
@@ -424,7 +460,11 @@ class Locadora(QMainWindow):
                 else:
                     QMessageBox.warning(self, "Erro", "Não foi possível devolver o filme no servidor.")
             except Exception as e:
-                QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
+                QMessageBox.critical(
+                self,
+                "Erro de Conexão",
+                "O servidor da API não está rodando.\n\nPor favor, inicie os contêineres com 'docker compose up -d'."
+            )
 
     def abrir_cliente(self):
         janela = JanelaCliente(self)
@@ -436,13 +476,18 @@ class Locadora(QMainWindow):
         try:
             res = requests.post(f"{API_URL}/clientes", json=novo_cliente)
             if res.status_code == 200:
-                self.clientes.append(novo_cliente)
+                cliente_salvo = res.json()
+                self.clientes.append(cliente_salvo)
                 QMessageBox.information(self, "Cliente cadastrado", f"Cliente '{nome}' cadastrado com sucesso.")
                 self.statusBar.showMessage(f"Cliente '{nome}' cadastrado.")
             else:
                 QMessageBox.warning(self, "Erro", "Não foi possível cadastrar o cliente no servidor.")
         except Exception as e:
-            QMessageBox.critical(self, "Erro de Conexão", f"Falha ao comunicar com a API: {e}")
+            QMessageBox.critical(
+                self,
+                "Erro de Conexão",
+                "O servidor da API não está rodando.\n\nPor favor, inicie os contêineres com 'docker compose up -d'."
+            )
 
     def abrir_filme(self):
         janela = JanelaFilme(self)
@@ -483,7 +528,13 @@ class Locadora(QMainWindow):
             self.alugar_filme(filme["codigo"])
 
     def sobre(self):
-        QMessageBox.information(self, "Sobre", "LOCADORA DE FILMES (Versão API)\n\nSistema desenvolvido em Python com PySide6 e FastAPI.\n\nAgora conectado a um banco de dados SQLite real via API!")
+        QMessageBox.information(
+            self,
+            "Sobre",
+            "LOCADORA DE FILMES (Versão API)\n\n"
+            "Sistema desenvolvido em Python com PySide6 e FastAPI.\n\n"
+            "Conectado a um banco de dados PostgreSQL via API em contêiner Docker."
+        )
 
     def closeEvent(self, event):
         resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
